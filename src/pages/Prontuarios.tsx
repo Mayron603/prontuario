@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Adicionado useMutation e useQueryClient
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ClipboardList, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-// CORREÇÃO: Importação separada para o Tipo
-import ProntuarioCard from '@/components/prontuarios/ProntuarioCard';
-import type { Prontuario } from '@/components/prontuarios/ProntuarioCard';
-
+import ProntuarioCard, { type Prontuario } from '@/components/prontuarios/ProntuarioCard';
 import ProntuarioFilters from '@/components/prontuarios/ProntuarioFilters';
+import { toast } from 'sonner'; // Para notificações
 
 export default function Prontuarios() {
+  const queryClient = useQueryClient(); // Cliente para atualizar a lista
   const [filters, setFilters] = useState({
     search: '',
     prioridade: 'all',
@@ -24,6 +23,25 @@ export default function Prontuarios() {
     queryKey: ['prontuarios'],
     queryFn: () => base44.entities.Prontuario.list('-created_date')
   });
+
+  // Mutação para deletar
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => base44.entities.Prontuario.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prontuarios'] });
+      toast.success('Prontuário excluído com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao excluir prontuário.');
+    }
+  });
+
+  // Função chamada pelo Card
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este prontuário? Essa ação não pode ser desfeita.')) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   const filteredProntuarios = prontuarios.filter((p: Prontuario) => {
     const searchMatch = !filters.search || 
@@ -118,6 +136,7 @@ export default function Prontuarios() {
                 key={prontuario.id} 
                 prontuario={prontuario} 
                 index={index}
+                onDelete={handleDelete} // Passando a função
               />
             ))}
           </div>

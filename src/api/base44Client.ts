@@ -24,6 +24,10 @@ export const base44 = {
         const response = await api.put(`/prontuarios/${id}`, data);
         return response.data;
       },
+      delete: async (id: string) => {
+    const response = await api.delete(`/prontuarios/${id}`);
+    return response.data;
+      },
       filter: async (criteria: any) => {
         // Busca um prontuário específico pelo ID
         if (criteria.id) {

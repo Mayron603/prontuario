@@ -52,6 +52,20 @@ app.put('/api/prontuarios/:id', async (req, res) => {
   }
 });
 
+// Rota para Excluir Prontuário (DELETE)
+app.delete('/api/prontuarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prontuario = await Prontuario.findByIdAndDelete(id);
+    
+    if (!prontuario) return res.status(404).json({ message: 'Prontuário não encontrado' });
+    
+    res.json({ message: 'Prontuário excluído com sucesso' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // --- Rotas de Prontuários ---
 app.get('/api/prontuarios', async (req, res) => {
   try {
