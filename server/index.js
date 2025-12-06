@@ -1,4 +1,3 @@
-// server/index.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -11,12 +10,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Conexão com MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Conectado ao MongoDB Atlas'))
-  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+// Rota Raiz (Opcional, mas bom para testar se o backend subiu)
+app.get('/', (req, res) => {
+  res.send('API Prontuário Eletrônico rodando!');
+});
 
-// Rotas de Prontuários
+// Conexão com MongoDB otimizada para Serverless
+// Evita criar múltiplas conexões a cada requisição
+const connectDB = async () => {
+  if (mongoose.connection.readyState === 0) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('Conectado ao MongoDB Atlas');
+    } catch (error) {
+      console.error('Erro ao conectar ao MongoDB:', error);
+    }
+  }
+};
+
+// Middleware para garantir conexão com banco antes das rotas
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
+// --- Rotas de Prontuários ---
 app.get('/api/prontuarios', async (req, res) => {
   try {
     const { sort } = req.query;
@@ -51,8 +69,15 @@ app.post('/api/prontuarios', async (req, res) => {
   }
 });
 
-// Inicializar servidor
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+// --- CONFIGURAÇÃO FINAL PARA VERCEL ---
+
+// Só inicia o servidor na porta se NÃO estiver na Vercel
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando localmente na porta ${PORT}`);
+  });
+}
+
+// Exporta o app para a Vercel
+module.exports = app;
