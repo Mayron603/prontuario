@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, Save, Plus, X, User, Activity, 
@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
-// 1. Interfaces para tipagem
+// 1. Interfaces
 interface SinalVital {
   data_hora: string;
   pa: string;
@@ -49,6 +49,7 @@ interface Prescricao {
 }
 
 interface ProntuarioData {
+  id?: string;
   nome_paciente: string;
   idade: string;
   sexo: string;
@@ -72,8 +73,10 @@ interface ProntuarioData {
 export default function CreateProntuario() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const idToEdit = searchParams.get('edit'); // Recupera ID da URL se estiver editando
   
-  // 2. Aplicação das interfaces no useState
+  // 2. Estado Principal
   const [prontuario, setProntuario] = useState<ProntuarioData>({
     nome_paciente: '',
     idade: '',
@@ -95,39 +98,58 @@ export default function CreateProntuario() {
     observacoes: ''
   });
 
+  // 3. Estados Auxiliares para novos itens
   const [novoDiagnostico, setNovoDiagnostico] = useState('');
   const [novaAlergia, setNovaAlergia] = useState('');
   
   const [novoSinalVital, setNovoSinalVital] = useState<SinalVital>({
-    data_hora: '',
-    pa: '',
-    fc: '',
-    fr: '',
-    temperatura: '',
-    spo2: '',
-    dor: ''
+    data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
   });
   
   const [novaEvolucao, setNovaEvolucao] = useState<Evolucao>({
-    data_hora: '',
-    descricao: '',
-    enfermeiro: ''
+    data_hora: '', descricao: '', enfermeiro: ''
   });
   
   const [novaIntervencao, setNovaIntervencao] = useState<Intervencao>({
-    intervencao: '',
-    horario: '',
-    responsavel: ''
+    intervencao: '', horario: '', responsavel: ''
   });
   
   const [novaPrescricao, setNovaPrescricao] = useState<Prescricao>({
-    medicamento: '',
-    dose: '',
-    via: '',
-    horarios: ''
+    medicamento: '', dose: '', via: '', horarios: ''
   });
 
-  const createMutation = useMutation({
+  // 4. Buscar dados se estiver editando
+  const { data: dadosExistentes, isLoading: loadingData } = useQuery({
+    queryKey: ['prontuario', idToEdit],
+    queryFn: async () => {
+      if (!idToEdit) return null;
+      const res = await base44.entities.Prontuario.filter({ id: idToEdit });
+      return res[0];
+    },
+    enabled: !!idToEdit
+  });
+
+  // 5. Preencher formulário ao carregar dados
+  useEffect(() => {
+    if (dadosExistentes) {
+      setProntuario({
+        ...dadosExistentes,
+        idade: dadosExistentes.idade?.toString() || '',
+        // Converter números para string para os inputs funcionarem corretamente
+        sinais_vitais: dadosExistentes.sinais_vitais?.map((s: any) => ({
+          ...s,
+          fc: s.fc?.toString() || '',
+          fr: s.fr?.toString() || '',
+          temperatura: s.temperatura?.toString() || '',
+          spo2: s.spo2?.toString() || '',
+          dor: s.dor?.toString() || ''
+        })) || []
+      });
+    }
+  }, [dadosExistentes]);
+
+  // 6. Mutação para Salvar (Criar ou Editar)
+  const saveMutation = useMutation({
     mutationFn: async (data: ProntuarioData) => {
       const cleanedData = {
         ...data,
@@ -141,27 +163,36 @@ export default function CreateProntuario() {
           dor: parseFloat(sv.dor) || 0
         }))
       };
-      return await base44.entities.Prontuario.create(cleanedData);
+
+      if (idToEdit) {
+        return await base44.entities.Prontuario.update(idToEdit, cleanedData);
+      } else {
+        return await base44.entities.Prontuario.create(cleanedData);
+      }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['prontuarios'] });
-      toast.success('Prontuário criado com sucesso!');
+      if (idToEdit) queryClient.invalidateQueries({ queryKey: ['prontuario', idToEdit] });
+      
+      toast.success(idToEdit ? 'Prontuário atualizado com sucesso!' : 'Prontuário criado com sucesso!');
       navigate(`${createPageUrl('ProntuarioDetalhe')}?id=${data.id}`);
     },
     onError: (error) => {
-      toast.error('Erro ao criar prontuário');
       console.error(error);
+      toast.error('Erro ao salvar prontuário');
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prontuario.nome_paciente || !prontuario.diagnostico_principal) {
-      toast.error('Preencha os campos obrigatórios');
+      toast.error('Preencha os campos obrigatórios (Nome e Diagnóstico Principal)');
       return;
     }
-    createMutation.mutate(prontuario);
+    saveMutation.mutate(prontuario);
   };
+
+  // --- Funções Auxiliares de Adição/Remoção ---
 
   const addDiagnosticoSecundario = () => {
     if (novoDiagnostico.trim()) {
@@ -204,14 +235,10 @@ export default function CreateProntuario() {
         sinais_vitais: [...prontuario.sinais_vitais, novoSinalVital]
       });
       setNovoSinalVital({
-        data_hora: '',
-        pa: '',
-        fc: '',
-        fr: '',
-        temperatura: '',
-        spo2: '',
-        dor: ''
+        data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
       });
+    } else {
+      toast.warning('Preencha pelo menos Data/Hora e PA');
     }
   };
 
@@ -229,6 +256,8 @@ export default function CreateProntuario() {
         evolucao_enfermagem: [...prontuario.evolucao_enfermagem, novaEvolucao]
       });
       setNovaEvolucao({ data_hora: '', descricao: '', enfermeiro: '' });
+    } else {
+      toast.warning('Preencha Data/Hora e Descrição');
     }
   };
 
@@ -246,6 +275,8 @@ export default function CreateProntuario() {
         intervencoes: [...prontuario.intervencoes, novaIntervencao]
       });
       setNovaIntervencao({ intervencao: '', horario: '', responsavel: '' });
+    } else {
+      toast.warning('Preencha a descrição da intervenção');
     }
   };
 
@@ -263,6 +294,8 @@ export default function CreateProntuario() {
         prescricoes: [...prontuario.prescricoes, novaPrescricao]
       });
       setNovaPrescricao({ medicamento: '', dose: '', via: '', horarios: '' });
+    } else {
+      toast.warning('Preencha pelo menos Medicamento e Dose');
     }
   };
 
@@ -273,6 +306,14 @@ export default function CreateProntuario() {
     });
   };
 
+  if (loadingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 py-8 px-6">
       <div className="container mx-auto max-w-5xl">
@@ -282,10 +323,10 @@ export default function CreateProntuario() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <Link to={createPageUrl('Prontuarios')}>
+          <Link to={idToEdit ? `${createPageUrl('ProntuarioDetalhe')}?id=${idToEdit}` : createPageUrl('Prontuarios')}>
             <Button variant="ghost" className="mb-4 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar aos Prontuários
+              {idToEdit ? 'Voltar ao Prontuário' : 'Voltar aos Prontuários'}
             </Button>
           </Link>
 
@@ -295,10 +336,10 @@ export default function CreateProntuario() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                Criar Novo Prontuário
+                {idToEdit ? 'Editar Prontuário' : 'Criar Novo Prontuário'}
               </h1>
               <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Preencha os dados do caso clínico simulado
+                {idToEdit ? 'Atualize as informações do paciente' : 'Preencha os dados do caso clínico simulado'}
               </p>
             </div>
           </div>
@@ -329,7 +370,7 @@ export default function CreateProntuario() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Identificação */}
+            {/* --- Identificação --- */}
             <TabsContent value="identificacao">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -434,7 +475,7 @@ export default function CreateProntuario() {
                       <Label>Data de Internação</Label>
                       <Input
                         type="date"
-                        value={prontuario.data_internacao}
+                        value={prontuario.data_internacao ? new Date(prontuario.data_internacao).toISOString().split('T')[0] : ''}
                         onChange={(e) => setProntuario({ ...prontuario, data_internacao: e.target.value })}
                         className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl"
                       />
@@ -444,7 +485,7 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* Dados Clínicos */}
+            {/* --- Dados Clínicos --- */}
             <TabsContent value="clinica">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -550,7 +591,7 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* Sinais Vitais */}
+            {/* --- Sinais Vitais --- */}
             <TabsContent value="sinais">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -616,7 +657,6 @@ export default function CreateProntuario() {
                       />
                     </div>
                     
-                    {/* BOTÃO MELHORADO */}
                     <Button 
                       type="button" 
                       onClick={addSinalVital} 
@@ -650,10 +690,10 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* Evolução */}
+            {/* --- Evolução e Intervenções --- */}
             <TabsContent value="evolucao">
               <div className="space-y-6">
-                {/* Evolução de Enfermagem */}
+                {/* Evolução */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -684,7 +724,6 @@ export default function CreateProntuario() {
                         className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
                       />
                       
-                      {/* BOTÃO MELHORADO */}
                       <Button 
                         type="button" 
                         onClick={addEvolucao} 
@@ -746,7 +785,6 @@ export default function CreateProntuario() {
                         />
                       </div>
                       
-                      {/* BOTÃO MELHORADO */}
                       <Button 
                         type="button" 
                         onClick={addIntervencao} 
@@ -777,7 +815,7 @@ export default function CreateProntuario() {
               </div>
             </TabsContent>
 
-            {/* Prescrições */}
+            {/* --- Prescrições --- */}
             <TabsContent value="prescricoes">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -815,7 +853,6 @@ export default function CreateProntuario() {
                       />
                     </div>
                     
-                    {/* BOTÃO MELHORADO */}
                     <Button 
                       type="button" 
                       onClick={addPrescricao} 
@@ -850,19 +887,19 @@ export default function CreateProntuario() {
             </TabsContent>
           </Tabs>
 
-          {/* Submit Button Melhorado */}
+          {/* Submit Button */}
           <div className="flex justify-end gap-4 mt-10 mb-20">
-            <Link to={createPageUrl('Prontuarios')}>
+            <Link to={idToEdit ? `${createPageUrl('ProntuarioDetalhe')}?id=${idToEdit}` : createPageUrl('Prontuarios')}>
               <Button type="button" variant="outline" className="h-12 px-6 rounded-xl border-slate-300 dark:border-slate-700">
                 Cancelar
               </Button>
             </Link>
             <Button 
               type="submit" 
-              disabled={createMutation.isPending}
+              disabled={saveMutation.isPending}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 h-12 px-8 rounded-xl text-base font-medium transition-all duration-300 hover:-translate-y-0.5"
             >
-              {createMutation.isPending ? (
+              {saveMutation.isPending ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   Salvando...
@@ -870,7 +907,7 @@ export default function CreateProntuario() {
               ) : (
                 <>
                   <Save className="w-5 h-5 mr-2" />
-                  Criar Prontuário
+                  {idToEdit ? 'Salvar Alterações' : 'Criar Prontuário'}
                 </>
               )}
             </Button>

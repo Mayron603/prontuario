@@ -34,6 +34,24 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Rota para Atualizar Prontuário (PUT)
+app.put('/api/prontuarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const dadosAtualizados = req.body;
+    
+    // findByIdAndUpdate: procura pelo ID e atualiza com o body
+    // { new: true }: retorna o objeto já atualizado
+    const prontuario = await Prontuario.findByIdAndUpdate(id, dadosAtualizados, { new: true });
+    
+    if (!prontuario) return res.status(404).json({ message: 'Prontuário não encontrado' });
+    
+    res.json(prontuario);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // --- Rotas de Prontuários ---
 app.get('/api/prontuarios', async (req, res) => {
   try {

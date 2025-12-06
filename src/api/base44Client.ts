@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Cria a instância do axios apontando para /api
-// No Vercel, o vercel.json redirecionará isso para o seu backend
+// O vercel.json redirecionará isso para o seu backend server/index.js
 const api = axios.create({
   baseURL: '/api' 
 });
@@ -19,13 +19,20 @@ export const base44 = {
         const response = await api.post('/prontuarios', data);
         return response.data;
       },
+      // Adicionado para permitir a Edição
+      update: async (id: string, data: any) => {
+        const response = await api.put(`/prontuarios/${id}`, data);
+        return response.data;
+      },
       filter: async (criteria: any) => {
-        // O código antigo usava filter({ id: '...' }) para pegar um único prontuário
+        // Busca um prontuário específico pelo ID
         if (criteria.id) {
           try {
             const response = await api.get(`/prontuarios/${criteria.id}`);
-            return [response.data]; // Retorna array pois o componente espera um array
+            // Retorna um array contendo o objeto, pois o frontend espera um array no .filter()
+            return [response.data];
           } catch (error) {
+            console.error("Erro ao buscar prontuário:", error);
             return [];
           }
         }
@@ -36,7 +43,6 @@ export const base44 = {
     // --- ANOTAÇÕES DO ESTUDANTE ---
     AnotacaoEstudante: {
       filter: async (criteria: any) => {
-        // Busca anotações pelo ID do prontuário
         if (criteria.prontuario_id) {
           const response = await api.get(`/anotacoes?prontuario_id=${criteria.prontuario_id}`);
           return response.data;
@@ -91,11 +97,17 @@ export const base44 = {
       },
     },
 
-    // --- BIBLIOTECA (Seus PDFs e Recursos) ---
+    // --- RECURSOS (Biblioteca) ---
+    // Mesmo tendo removido a página, mantive aqui caso precise no futuro ou para evitar erro de TS se algo ainda referenciar
     RecursoBiblioteca: {
       list: async (sort?: string) => {
-        const response = await api.get(`/recursos${sort ? `?sort=${sort}` : ''}`);
-        return response.data;
+        // Se você não tiver essa rota no backend, isso retornará 404, mas não quebra o build
+        try {
+          const response = await api.get(`/recursos${sort ? `?sort=${sort}` : ''}`);
+          return response.data;
+        } catch (error) {
+          return [];
+        }
       },
     }
   }

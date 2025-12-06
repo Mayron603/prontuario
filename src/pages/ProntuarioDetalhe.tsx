@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   ArrowLeft, User, Calendar, Activity, FileText, 
   Heart, Stethoscope, ClipboardList, Pill, AlertCircle,
-  Save, Loader2, Edit3, Plus, BookOpen,
+  Save, Loader2, Edit3, Plus, BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,9 +18,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import SAEForm from '@/components/sae/SAEForm';
+
+// CORREÇÃO AQUI: Adicionado 'type' nas importações
+import SAEForm, { type SAEData } from '@/components/sae/SAEForm';
 import SAECard from '@/components/sae/SAECard';
-import RelatorioAltaForm from '@/components/alta/RelatorioAltaForm';
+import RelatorioAltaForm, { type RelatorioAltaData } from '@/components/alta/RelatorioAltaForm';
 
 // Interfaces para tipagem dos dados recebidos
 interface ProntuarioCompleto {
@@ -38,6 +40,7 @@ interface ProntuarioCompleto {
   antecedentes: string;
   alergias: string[];
   observacoes: string;
+  data_internacao?: string;
   sinais_vitais: any[];
   evolucao_enfermagem: any[];
   intervencoes: any[];
@@ -52,13 +55,14 @@ export default function ProntuarioDetalhe() {
   const [anotacaoEstudante, setAnotacaoEstudante] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showSAEDialog, setShowSAEDialog] = useState(false);
-  const [editingSAE, setEditingSAE] = useState<any>(null);
-  const [viewingSAE, setViewingSAE] = useState<any>(null);
+  const [editingSAE, setEditingSAE] = useState<SAEData | null>(null);
+  const [viewingSAE, setViewingSAE] = useState<SAEData | null>(null);
   const [showAltaDialog, setShowAltaDialog] = useState(false);
 
   const { data: prontuario, isLoading } = useQuery({
     queryKey: ['prontuario', id],
     queryFn: async () => {
+      if (!id) return null;
       const results = await base44.entities.Prontuario.filter({ id });
       return results[0] as ProntuarioCompleto;
     },
@@ -110,7 +114,7 @@ export default function ProntuarioDetalhe() {
 
   const saveSAE = useMutation({
     mutationFn: async (data: any) => {
-      if (editingSAE) {
+      if (editingSAE && editingSAE.id) {
         return await base44.entities.SAE.update(editingSAE.id, data);
       }
       return await base44.entities.SAE.create(data);
@@ -133,7 +137,7 @@ export default function ProntuarioDetalhe() {
     saveSAE.mutate(data);
   };
 
-  const handleEditSAE = (sae: any) => {
+  const handleEditSAE = (sae: SAEData) => {
     setEditingSAE(sae);
     setShowSAEDialog(true);
   };
@@ -146,7 +150,7 @@ export default function ProntuarioDetalhe() {
 
   const saveRelatorioAlta = useMutation({
     mutationFn: async (data: any) => {
-      if (alta) {
+      if (alta && alta.id) {
         return await base44.entities.RelatorioAlta.update(alta.id, data);
       }
       return await base44.entities.RelatorioAlta.create(data);
@@ -157,7 +161,7 @@ export default function ProntuarioDetalhe() {
     }
   });
 
-  const handleSaveAlta = (data: any) => {
+  const handleSaveAlta = (data: RelatorioAltaData) => {
     saveRelatorioAlta.mutate(data);
   };
 
@@ -220,9 +224,18 @@ export default function ProntuarioDetalhe() {
                   {prontuario.nome_paciente?.charAt(0)}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {prontuario.nome_paciente}
-                  </h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {prontuario.nome_paciente}
+                    </h1>
+                    {/* BOTÃO DE EDITAR */}
+                    <Link to={`${createPageUrl('CreateProntuario')}?edit=${prontuario.id}`}>
+                      <Button variant="outline" size="sm" className="gap-1 h-8 rounded-lg">
+                        <Edit3 className="w-3.5 h-3.5" />
+                        Editar Dados
+                      </Button>
+                    </Link>
+                  </div>
                   <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 mt-1">
                     <span className="flex items-center gap-1">
                       <User className="w-4 h-4" />
@@ -236,28 +249,25 @@ export default function ProntuarioDetalhe() {
                 </div>
               </div>
              <div className="flex flex-wrap gap-2">
-          {/* Estado Clínico */}
-          <Badge className={`${estadoColors[prontuario.estado_clinico] || 'bg-slate-100'} border-0 px-3 py-1`}>
-            <Activity className="w-3 h-3 mr-2" />
-            <span className="font-normal opacity-80 mr-1">Estado:</span>
-            {prontuario.estado_clinico}
-          </Badge>
+              <Badge className={`${estadoColors[prontuario.estado_clinico] || 'bg-slate-100'} border-0 px-3 py-1`}>
+                <Activity className="w-3 h-3 mr-2" />
+                <span className="font-normal opacity-80 mr-1">Estado:</span>
+                {prontuario.estado_clinico}
+              </Badge>
 
-          {/* Prioridade */}
-          <Badge className={`${prioridadeColors[prontuario.prioridade] || 'bg-slate-100'} border-0 px-3 py-1`}>
-            <AlertCircle className="w-3 h-3 mr-2" />
-            <span className="font-normal opacity-80 mr-1">Prioridade:</span>
-            {prontuario.prioridade}
-          </Badge>
+              <Badge className={`${prioridadeColors[prontuario.prioridade] || 'bg-slate-100'} border-0 px-3 py-1`}>
+                <AlertCircle className="w-3 h-3 mr-2" />
+                <span className="font-normal opacity-80 mr-1">Prioridade:</span>
+                {prontuario.prioridade}
+              </Badge>
 
-          {/* Complexidade */}
-          {prontuario.complexidade && (
-            <Badge variant="outline" className="dark:border-slate-600 dark:text-slate-300 px-3 py-1">
-              <span className="font-normal text-slate-500 dark:text-slate-400 mr-1">Complexidade:</span>
-              {prontuario.complexidade}
-            </Badge>
-          )}
-        </div>
+              {prontuario.complexidade && (
+                <Badge variant="outline" className="dark:border-slate-600 dark:text-slate-300 px-3 py-1">
+                  <span className="font-normal text-slate-500 dark:text-slate-400 mr-1">Complexidade:</span>
+                  {prontuario.complexidade}
+                </Badge>
+              )}
+            </div>
             </div>
           </div>
         </motion.div>
@@ -283,7 +293,7 @@ export default function ProntuarioDetalhe() {
                     <FileText className="w-5 h-5 text-blue-600" />
                     Diagnóstico e História Clínica
                   </CardTitle>
-                </CardHeader>f<div className="flex flex-wrap gap-2"></div>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Diagnóstico Principal</h4>
@@ -537,7 +547,6 @@ export default function ProntuarioDetalhe() {
                     onChange={(e) => setAnotacaoEstudante(e.target.value)}
                     className="min-h-[200px] bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-xl mb-4"
                   />
-                  {/* BOTÃO MELHORADO */}
                   <Button 
                     onClick={handleSalvarAnotacao}
                     disabled={isSaving || !anotacaoEstudante.trim()}
@@ -593,7 +602,6 @@ export default function ProntuarioDetalhe() {
                         Registros por plantão
                       </p>
                     </div>
-                    {/* BOTÃO MELHORADO */}
                     <Button 
                       onClick={() => {
                         setEditingSAE(null);
@@ -646,7 +654,6 @@ export default function ProntuarioDetalhe() {
                     </p>
                   </div>
                   {!alta && (
-                    /* BOTÃO MELHORADO */
                     <Button 
                       onClick={() => setShowAltaDialog(true)}
                       className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20 rounded-xl px-5 transition-all hover:-translate-y-0.5"
