@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ClipboardList, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ProntuarioCard from '@/components/prontuarios/ProntuarioCard';
+import ProntuarioCard, { Prontuario } from '@/components/prontuarios/ProntuarioCard'; // Importando a interface
 import ProntuarioFilters from '@/components/prontuarios/ProntuarioFilters';
 
 export default function Prontuarios() {
@@ -17,12 +17,14 @@ export default function Prontuarios() {
     complexidade: 'all'
   });
 
-  const { data: prontuarios = [], isLoading } = useQuery({
+  // Tipando o retorno da query
+  const { data: prontuarios = [], isLoading } = useQuery<Prontuario[]>({
     queryKey: ['prontuarios'],
     queryFn: () => base44.entities.Prontuario.list('-created_date')
   });
 
-  const filteredProntuarios = prontuarios.filter(p => {
+  // Tipando 'p' explicitamente
+  const filteredProntuarios = prontuarios.filter((p: Prontuario) => {
     const searchMatch = !filters.search || 
       p.nome_paciente?.toLowerCase().includes(filters.search.toLowerCase()) ||
       p.diagnostico_principal?.toLowerCase().includes(filters.search.toLowerCase());
@@ -65,7 +67,6 @@ export default function Prontuarios() {
               </p>
             </div>
             
-            {/* BOTÃO ATUALIZADO AQUI */}
             <Link to={createPageUrl('CreateProntuario')}>
               <Button className="bg-[#10a37f] hover:bg-[#0d8a6a] text-white shadow-md rounded-full font-medium px-6 h-11 transition-all hover:shadow-lg">
                 <Plus className="w-5 h-5 mr-2" />
@@ -111,7 +112,7 @@ export default function Prontuarios() {
           </motion.div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProntuarios.map((prontuario, index) => (
+            {filteredProntuarios.map((prontuario: Prontuario, index: number) => (
               <ProntuarioCard 
                 key={prontuario.id} 
                 prontuario={prontuario} 

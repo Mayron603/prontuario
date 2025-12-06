@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,11 +13,16 @@ const navItems = [
   { name: 'Início', href: 'Home', icon: Home },
   { name: 'Prontuários', href: 'Prontuarios', icon: ClipboardList },
   { name: 'Anotações', href: 'Anotacoes', icon: FileText },
-  { name: 'Escalas', href: 'Escalas', icon: Calculator },
-  { name: 'Biblioteca', href: 'Biblioteca', icon: BookOpen }
+  { name: 'Escalas', href: 'Escalas', icon: Calculator }
 ];
 
-export default function Layout({ children, currentPageName }) {
+// Interface para as props
+interface LayoutProps {
+  children: ReactNode;
+  currentPageName: string;
+}
+
+export default function Layout({ children, currentPageName }: LayoutProps) {
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark';
@@ -44,11 +49,10 @@ export default function Layout({ children, currentPageName }) {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-20"> {/* Aumentei um pouco a altura para h-20 */}
+          <div className="flex items-center justify-between h-20">
             
             {/* Logo */}
             <Link to={createPageUrl('Home')} className="flex items-center gap-3 group">
-              {/* Ícone da Logo sem fundo colorido para ficar mais limpo, ou mantemos sutil */}
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-200">
                 <Stethoscope className="w-6 h-6" />
               </div>
@@ -57,14 +61,14 @@ export default function Layout({ children, currentPageName }) {
               </span>
             </Link>
 
-            {/* Desktop Nav - AQUI ESTÁ A MUDANÇA VISUAL */}
+            {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1 bg-slate-50/50 dark:bg-slate-800/50 p-1.5 rounded-full border border-slate-200/50 dark:border-slate-700/50">
               {navItems.map((item) => {
                 const isActive = currentPageName === item.href;
                 return (
                   <Link key={item.name} to={createPageUrl(item.href)}>
                     <Button
-                      variant="ghost" // Usamos ghost base para remover bordas padrão
+                      variant="ghost"
                       className={`
                         relative h-10 px-5 rounded-full text-sm font-medium transition-all duration-300
                         ${isActive 
@@ -81,7 +85,7 @@ export default function Layout({ children, currentPageName }) {
               })}
             </nav>
 
-            {/* Actions (Direita) */}
+            {/* Actions */}
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -143,7 +147,7 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </main>
 
-      {/* Footer (Simplificado para combinar com o novo estilo) */}
+      {/* Footer */}
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 py-8 mt-auto">
         <div className="container mx-auto px-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-4 opacity-80">

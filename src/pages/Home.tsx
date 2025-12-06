@@ -1,4 +1,3 @@
-import React from 'react';
 import HeroSection from '@/components/home/HeroSection';
 import QuickAccessCards from '@/components/home/QuickAccessCards';
 import { motion } from 'framer-motion';
