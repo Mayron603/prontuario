@@ -6,7 +6,10 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ClipboardList, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ProntuarioCard, { Prontuario } from '@/components/prontuarios/ProntuarioCard'; // Importando a interface
+// CORREÇÃO: Importação separada para o Tipo
+import ProntuarioCard from '@/components/prontuarios/ProntuarioCard';
+import type { Prontuario } from '@/components/prontuarios/ProntuarioCard';
+
 import ProntuarioFilters from '@/components/prontuarios/ProntuarioFilters';
 
 export default function Prontuarios() {
@@ -17,13 +20,11 @@ export default function Prontuarios() {
     complexidade: 'all'
   });
 
-  // Tipando o retorno da query
   const { data: prontuarios = [], isLoading } = useQuery<Prontuario[]>({
     queryKey: ['prontuarios'],
     queryFn: () => base44.entities.Prontuario.list('-created_date')
   });
 
-  // Tipando 'p' explicitamente
   const filteredProntuarios = prontuarios.filter((p: Prontuario) => {
     const searchMatch = !filters.search || 
       p.nome_paciente?.toLowerCase().includes(filters.search.toLowerCase()) ||

@@ -1,12 +1,12 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react'; // <--- CORREÇÃO: Importação explicita de tipo
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, ClipboardList, FileText, Calculator, 
-  BookOpen, Menu, X, Moon, Sun, Heart,
-  Stethoscope
-} from 'lucide-react';
+  Menu, X, Moon, Sun, Heart, Stethoscope
+} from 'lucide-react'; // <--- CORREÇÃO: 'BookOpen' removido
 import { Button } from '@/components/ui/button';
 
 const navItems = [
