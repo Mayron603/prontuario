@@ -7,7 +7,7 @@ import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, Save, Plus, X, User, Activity, 
   Heart, Pill, FileText, Loader2, Stethoscope,
-  ClipboardList, BrainCircuit
+  ClipboardList, BrainCircuit, Target, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 
 // 1. Interfaces Atualizadas
@@ -33,15 +34,28 @@ interface SinalVital {
 interface Evolucao {
   data_hora: string;
   descricao: string;
-  avaliacao: string; // [NOVO]
+  avaliacao: string;
   enfermeiro: string;
 }
 
-// [NOVO] Interface para Diagnóstico de Enfermagem
 interface DiagnosticoEnf {
   tipo: 'Diagnóstico' | 'Risco' | 'Promoção';
   descricao: string;
   enfermeiro: string;
+}
+
+// Interfaces para Planejamento SMART
+interface AcaoSmart {
+  especifico: string;
+  mensuravel: string;
+  atingivel: string;
+  relevante: string;
+  temporal: string;
+}
+
+interface Planejamento {
+  enfermeiro: string;
+  acoes_smart: AcaoSmart[];
 }
 
 interface Intervencao {
@@ -74,7 +88,8 @@ interface ProntuarioData {
   alergias: string[];
   sinais_vitais: SinalVital[];
   evolucao_enfermagem: Evolucao[];
-  diagnosticos_enfermagem: DiagnosticoEnf[]; // [NOVO]
+  diagnosticos_enfermagem: DiagnosticoEnf[];
+  planejamento: Planejamento[];
   intervencoes: Intervencao[];
   prescricoes: Prescricao[];
   observacoes: string;
@@ -103,7 +118,8 @@ export default function CreateProntuario() {
     alergias: [],
     sinais_vitais: [],
     evolucao_enfermagem: [],
-    diagnosticos_enfermagem: [], // [NOVO]
+    diagnosticos_enfermagem: [],
+    planejamento: [],
     intervencoes: [],
     prescricoes: [],
     observacoes: ''
@@ -117,17 +133,22 @@ export default function CreateProntuario() {
     data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
   });
   
-  // [MODIFICADO] Evolução com Avaliação
   const [novaEvolucao, setNovaEvolucao] = useState<Evolucao>({
     data_hora: '', descricao: '', avaliacao: '', enfermeiro: ''
   });
 
-  // [NOVO] Estado para Diagnóstico de Enfermagem
   const [novoDiagnosticoEnf, setNovoDiagnosticoEnf] = useState<DiagnosticoEnf>({
     tipo: 'Diagnóstico',
     descricao: '',
     enfermeiro: ''
   });
+
+  // Estados para Planejamento SMART
+  const [novoPlanejamentoEnfermeiro, setNovoPlanejamentoEnfermeiro] = useState('');
+  const [novaAcaoSmart, setNovaAcaoSmart] = useState<AcaoSmart>({
+    especifico: '', mensuravel: '', atingivel: '', relevante: '', temporal: ''
+  });
+  const [acoesSmartTemp, setAcoesSmartTemp] = useState<AcaoSmart[]>([]);
   
   const [novaIntervencao, setNovaIntervencao] = useState<Intervencao>({
     intervencao: '', horario: '', responsavel: ''
@@ -162,8 +183,8 @@ export default function CreateProntuario() {
           spo2: s.spo2?.toString() || '',
           dor: s.dor?.toString() || ''
         })) || [],
-        // Garantir arrays vazios se não existirem no backend antigo
-        diagnosticos_enfermagem: dadosExistentes.diagnosticos_enfermagem || []
+        diagnosticos_enfermagem: dadosExistentes.diagnosticos_enfermagem || [],
+        planejamento: dadosExistentes.planejamento || []
       });
     }
   }, [dadosExistentes]);
@@ -269,7 +290,6 @@ export default function CreateProntuario() {
     });
   };
 
-  // [MODIFICADO] Adicionar Evolução
   const addEvolucao = () => {
     if (novaEvolucao.data_hora && novaEvolucao.descricao) {
       setProntuario({
@@ -289,7 +309,45 @@ export default function CreateProntuario() {
     });
   };
 
-  // [NOVO] Adicionar Diagnóstico de Enfermagem
+  // Funções para Planejamento SMART
+  const addAcaoSmartTemp = () => {
+    if (novaAcaoSmart.especifico) {
+      setAcoesSmartTemp([...acoesSmartTemp, novaAcaoSmart]);
+      setNovaAcaoSmart({ especifico: '', mensuravel: '', atingivel: '', relevante: '', temporal: '' });
+    } else {
+      toast.warning('Preencha pelo menos o campo "Específico"');
+    }
+  };
+
+  const removeAcaoSmartTemp = (index: number) => {
+    setAcoesSmartTemp(acoesSmartTemp.filter((_, i) => i !== index));
+  };
+
+  const addPlanejamentoBlock = () => {
+    if (novoPlanejamentoEnfermeiro && acoesSmartTemp.length > 0) {
+      setProntuario({
+        ...prontuario,
+        planejamento: [...prontuario.planejamento, {
+          enfermeiro: novoPlanejamentoEnfermeiro,
+          acoes_smart: [...acoesSmartTemp]
+        }]
+      });
+      // Limpar campos
+      setNovoPlanejamentoEnfermeiro('');
+      setAcoesSmartTemp([]);
+      setNovaAcaoSmart({ especifico: '', mensuravel: '', atingivel: '', relevante: '', temporal: '' });
+    } else {
+      toast.warning('Preencha o Enfermeiro e adicione pelo menos uma ação SMART');
+    }
+  };
+
+  const removePlanejamentoBlock = (index: number) => {
+    setProntuario({
+      ...prontuario,
+      planejamento: prontuario.planejamento.filter((_, i) => i !== index)
+    });
+  };
+
   const addDiagnosticoEnf = () => {
     if (novoDiagnosticoEnf.descricao && novoDiagnosticoEnf.enfermeiro) {
       setProntuario({
@@ -411,7 +469,6 @@ export default function CreateProntuario() {
               </TabsTrigger>
             </TabsList>
 
-            {/* ... Conteúdo das Tabs Identificação, Clínica e Sinais (IGUAIS AO ANTERIOR) ... */}
             <TabsContent value="identificacao">
                  <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -729,10 +786,10 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* --- Evolução, Diagnóstico e Implementação --- */}
+            {/* --- Evolução, Planejamento (SMART), Diagnóstico e Implementação --- */}
             <TabsContent value="evolucao">
               <div className="space-y-8">
-                {/* 1. Evolução */}
+                {/* 1. Evolução com Avaliação */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -763,7 +820,7 @@ export default function CreateProntuario() {
                         onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
                         className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
                       />
-                      {/* Novo Campo Avaliação */}
+                      {/* Campo Avaliação */}
                       <Textarea
                         placeholder="Avaliação..."
                         value={novaEvolucao.avaliacao}
@@ -811,7 +868,122 @@ export default function CreateProntuario() {
                   </CardContent>
                 </Card>
 
-                {/* 2. Diagnóstico de Enfermagem (NOVA SEÇÃO) */}
+                {/* 2. Planejamento SMART (NOVA SEÇÃO) */}
+                <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+                      <Target className="w-5 h-5 text-teal-600" />
+                      Planejamento de Enfermagem (SMART)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Formulário de Adição */}
+                    <div className="p-5 bg-teal-50/50 dark:bg-teal-900/10 rounded-2xl border border-teal-100 dark:border-teal-900/30 space-y-4">
+                      <div className="space-y-2">
+                        <Label>Enfermeiro Responsável pelo Planejamento</Label>
+                        <Input
+                          placeholder="Nome e COREN"
+                          value={novoPlanejamentoEnfermeiro}
+                          onChange={(e) => setNovoPlanejamentoEnfermeiro(e.target.value)}
+                          className="bg-white dark:bg-slate-800"
+                        />
+                      </div>
+
+                      <div className="space-y-3 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <Label className="text-teal-700 dark:text-teal-400 font-medium">Nova Ação SMART</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <Input placeholder="Específico (O que fazer?)" value={novaAcaoSmart.especifico} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, especifico: e.target.value })} />
+                          <Input placeholder="Mensurável (Como medir?)" value={novaAcaoSmart.mensuravel} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, mensuravel: e.target.value })} />
+                          <Input placeholder="Atingível (É possível?)" value={novaAcaoSmart.atingivel} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, atingivel: e.target.value })} />
+                          <Input placeholder="Relevante (Por que?)" value={novaAcaoSmart.relevante} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, relevante: e.target.value })} />
+                          <Input placeholder="Temporal (Quando?)" value={novaAcaoSmart.temporal} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, temporal: e.target.value })} />
+                          <Button type="button" onClick={addAcaoSmartTemp} variant="outline" className="bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-900/40 dark:text-teal-300">
+                            <Plus className="w-4 h-4 mr-2" /> Adicionar Linha
+                          </Button>
+                        </div>
+
+                        {/* Tabela Temporária */}
+                        {acoesSmartTemp.length > 0 && (
+                          <div className="mt-4 border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Específico</TableHead>
+                                  <TableHead>Mensurável</TableHead>
+                                  <TableHead>Temporal</TableHead>
+                                  <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {acoesSmartTemp.map((acao, i) => (
+                                  <TableRow key={i}>
+                                    <TableCell>{acao.especifico}</TableCell>
+                                    <TableCell>{acao.mensuravel}</TableCell>
+                                    <TableCell>{acao.temporal}</TableCell>
+                                    <TableCell>
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAcaoSmartTemp(i)}>
+                                        <X className="w-4 h-4 text-red-500" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+
+                      <Button 
+                        type="button" 
+                        onClick={addPlanejamentoBlock} 
+                        className="w-full bg-teal-600 hover:bg-teal-700 text-white h-12 rounded-xl"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        Salvar Bloco de Planejamento
+                      </Button>
+                    </div>
+
+                    {/* Lista de Planejamentos Salvos */}
+                    <div className="space-y-4">
+                      {prontuario.planejamento.map((plan, i) => (
+                        <div key={i} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                          <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                            <span className="font-medium text-slate-700 dark:text-slate-300">Enfermeiro: {plan.enfermeiro}</span>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removePlanejamentoBlock(i)}>
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Específico</TableHead>
+                                  <TableHead>Mensurável</TableHead>
+                                  <TableHead>Atingível</TableHead>
+                                  <TableHead>Relevante</TableHead>
+                                  <TableHead>Temporal</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {plan.acoes_smart.map((acao, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell>{acao.especifico}</TableCell>
+                                    <TableCell>{acao.mensuravel}</TableCell>
+                                    <TableCell>{acao.atingivel}</TableCell>
+                                    <TableCell>{acao.relevante}</TableCell>
+                                    <TableCell>{acao.temporal}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 3. Diagnóstico de Enfermagem */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -901,7 +1073,7 @@ export default function CreateProntuario() {
                   </CardContent>
                 </Card>
 
-                {/* 3. Implementação (RENOMEADO) */}
+                {/* 4. Implementação */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -962,7 +1134,6 @@ export default function CreateProntuario() {
               </div>
             </TabsContent>
             
-            {/* ... Tab Prescrições (IGUAL AO ANTERIOR) ... */}
             <TabsContent value="prescricoes">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>

@@ -25,23 +25,47 @@ const ProntuarioSchema = new mongoose.Schema({
       dor: Number
     }
   ],
-  // [MODIFICADO] Adicionado campo avaliacao
   evolucao_enfermagem: [
     {
       data_hora: String,
       descricao: String,
-      avaliacao: String, 
+      avaliacao: String,
       enfermeiro: String
     }
   ],
-  // [NOVO] Novo campo para Diagnósticos de Enfermagem
+  // [NOVO] Diagnósticos
   diagnosticos_enfermagem: [
     {
-      tipo: String, // 'Diagnóstico', 'Risco', 'Promoção'
+      tipo: String,
       descricao: String,
       enfermeiro: String
     }
   ],
+  // [NOVO] Planejamento com Tabela SMART
+  planejamento: [
+    {
+      enfermeiro: String,
+      acoes_smart: [
+        {
+          especifico: String,
+          mensuravel: String,
+          atingivel: String,
+          relevante: String,
+          temporal: String
+        }
+      ]
+    }
+  ],
+  // [NOVO] Avaliação (Seção Específica)
+  avaliacao: [
+    {
+      data_hora: String,
+      enfermeiro: String,
+      descricao: String,
+      avaliacao: String
+    }
+  ],
+  // [RENOMEADO/MANTIDO] Implementação (antiga intervenções)
   intervencoes: [
     {
       intervencao: String,
