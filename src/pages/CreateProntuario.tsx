@@ -20,7 +20,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 
-// 1. Interfaces Atualizadas
+// 1. Interfaces
 interface SinalVital {
   data_hora: string;
   pa: string;
@@ -31,11 +31,12 @@ interface SinalVital {
   dor: string;
 }
 
+// EVOLUÇÃO CONTENDO AVALIAÇÃO INTEGRADA
 interface Evolucao {
   data_hora: string;
-  descricao: string;
-  avaliacao: string;
   enfermeiro: string;
+  descricao: string;
+  avaliacao: string; 
 }
 
 interface DiagnosticoEnf {
@@ -44,7 +45,6 @@ interface DiagnosticoEnf {
   enfermeiro: string;
 }
 
-// Interfaces para Planejamento SMART
 interface AcaoSmart {
   especifico: string;
   mensuravel: string;
@@ -87,7 +87,7 @@ interface ProntuarioData {
   antecedentes: string;
   alergias: string[];
   sinais_vitais: SinalVital[];
-  evolucao_enfermagem: Evolucao[];
+  evolucao_enfermagem: Evolucao[]; 
   diagnosticos_enfermagem: DiagnosticoEnf[];
   planejamento: Planejamento[];
   intervencoes: Intervencao[];
@@ -133,8 +133,9 @@ export default function CreateProntuario() {
     data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
   });
   
+  // Estado da Evolução (agora com Avaliação)
   const [novaEvolucao, setNovaEvolucao] = useState<Evolucao>({
-    data_hora: '', descricao: '', avaliacao: '', enfermeiro: ''
+    data_hora: '', enfermeiro: '', descricao: '', avaliacao: ''
   });
 
   const [novoDiagnosticoEnf, setNovoDiagnosticoEnf] = useState<DiagnosticoEnf>({
@@ -183,6 +184,7 @@ export default function CreateProntuario() {
           spo2: s.spo2?.toString() || '',
           dor: s.dor?.toString() || ''
         })) || [],
+        evolucao_enfermagem: dadosExistentes.evolucao_enfermagem || [],
         diagnosticos_enfermagem: dadosExistentes.diagnosticos_enfermagem || [],
         planejamento: dadosExistentes.planejamento || []
       });
@@ -290,15 +292,16 @@ export default function CreateProntuario() {
     });
   };
 
+  // Funções da Evolução (Agora contendo Avaliação)
   const addEvolucao = () => {
-    if (novaEvolucao.data_hora && novaEvolucao.descricao) {
+    if (novaEvolucao.data_hora && (novaEvolucao.descricao || novaEvolucao.avaliacao)) {
       setProntuario({
         ...prontuario,
         evolucao_enfermagem: [...prontuario.evolucao_enfermagem, novaEvolucao]
       });
-      setNovaEvolucao({ data_hora: '', descricao: '', avaliacao: '', enfermeiro: '' });
+      setNovaEvolucao({ data_hora: '', enfermeiro: '', descricao: '', avaliacao: '' });
     } else {
-      toast.warning('Preencha Data/Hora e Descrição');
+      toast.warning('Preencha Data/Hora e a Descrição ou Avaliação');
     }
   };
 
@@ -786,10 +789,10 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* --- Evolução, Planejamento (SMART), Diagnóstico e Implementação --- */}
+            {/* --- Evolução (Integrada), Planejamento (SMART), Diagnóstico e Implementação --- */}
             <TabsContent value="evolucao">
               <div className="space-y-8">
-                {/* 1. Evolução com Avaliação */}
+                {/* 1. Evolução DE ENFERMAGEM (Inclui Avaliação) */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -814,19 +817,26 @@ export default function CreateProntuario() {
                           className="bg-white dark:bg-slate-800 rounded-xl"
                         />
                       </div>
-                      <Textarea
-                        placeholder="Descrição da evolução..."
-                        value={novaEvolucao.descricao}
-                        onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
-                        className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
-                      />
-                      {/* Campo Avaliação */}
-                      <Textarea
-                        placeholder="Avaliação..."
-                        value={novaEvolucao.avaliacao}
-                        onChange={(e) => setNovaEvolucao({ ...novaEvolucao, avaliacao: e.target.value })}
-                        className="bg-white dark:bg-slate-800 min-h-[80px] rounded-xl border-slate-200 dark:border-slate-700"
-                      />
+                      <div className="space-y-2">
+                         <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Descrição da Evolução</Label>
+                         <Textarea
+                          placeholder="Descreva a evolução do paciente..."
+                          value={novaEvolucao.descricao}
+                          onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
+                        />
+                      </div>
+                      
+                      {/* Campo Avaliação Integrado */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avaliação de Enfermagem</Label>
+                        <Textarea
+                          placeholder="Realize a avaliação de enfermagem..."
+                          value={novaEvolucao.avaliacao}
+                          onChange={(e) => setNovaEvolucao({ ...novaEvolucao, avaliacao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 min-h-[80px] rounded-xl border-slate-200 dark:border-slate-700"
+                        />
+                      </div>
                       
                       <Button 
                         type="button" 
@@ -852,14 +862,20 @@ export default function CreateProntuario() {
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
-                          <div className="space-y-2">
-                            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
-                              <strong>Descrição:</strong> {ev.descricao}
-                            </p>
-                            {ev.avaliacao && (
-                              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line p-2 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                                <strong>Avaliação:</strong> {ev.avaliacao}
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-xs font-semibold text-slate-500 uppercase">Descrição:</span>
+                              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mt-1">
+                                {ev.descricao}
                               </p>
+                            </div>
+                            {ev.avaliacao && (
+                              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
+                                <span className="text-xs font-semibold text-slate-500 uppercase">Avaliação:</span>
+                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mt-1">
+                                  {ev.avaliacao}
+                                </p>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -868,7 +884,7 @@ export default function CreateProntuario() {
                   </CardContent>
                 </Card>
 
-                {/* 2. Planejamento SMART (NOVA SEÇÃO) */}
+                {/* 2. Planejamento SMART */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">

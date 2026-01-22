@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   ArrowLeft, User, Calendar, Activity, FileText, 
   Heart, Stethoscope, ClipboardList, Pill, AlertCircle,
-  Save, Loader2, Edit3, Plus, BookOpen
+  Save, Loader2, Edit3, Plus, BookOpen, Target, CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,12 +19,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-// CORREÇÃO AQUI: Adicionado 'type' nas importações
 import SAEForm, { type SAEData } from '@/components/sae/SAEForm';
 import SAECard from '@/components/sae/SAECard';
 import RelatorioAltaForm, { type RelatorioAltaData } from '@/components/alta/RelatorioAltaForm';
 
-// Interfaces para tipagem dos dados recebidos
+// Interfaces atualizadas para bater com o CreateProntuario
 interface ProntuarioCompleto {
   id: string;
   nome_paciente: string;
@@ -45,6 +44,23 @@ interface ProntuarioCompleto {
   evolucao_enfermagem: any[];
   intervencoes: any[];
   prescricoes: any[];
+  // Novos campos adicionados
+  planejamento?: {
+    enfermeiro: string;
+    acoes_smart: {
+      especifico: string;
+      mensuravel: string;
+      atingivel: string;
+      relevante: string;
+      temporal: string;
+    }[];
+  }[];
+  avaliacao?: {
+    data_hora: string;
+    enfermeiro: string;
+    descricao: string;
+    avaliacao: string;
+  }[];
 }
 
 export default function ProntuarioDetalhe() {
@@ -408,6 +424,61 @@ export default function ProntuarioDetalhe() {
           {/* Evolução */}
           <TabsContent value="evolucao">
             <div className="space-y-4">
+              
+              {/* PLANEJAMENTO (SMART) - VISUALIZAÇÃO */}
+              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                    <Target className="w-5 h-5 text-indigo-600" />
+                    Planejamento de Enfermagem (SMART)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {prontuario.planejamento && prontuario.planejamento.length > 0 ? (
+                    <div className="space-y-6">
+                      {prontuario.planejamento.map((plan, idx) => (
+                        <div key={idx} className="space-y-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              Enf. {plan.enfermeiro}
+                            </Badge>
+                          </div>
+                          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                            <Table>
+                              <TableHeader className="bg-slate-50 dark:bg-slate-900">
+                                <TableRow>
+                                  <TableHead className="min-w-[150px]">Específico</TableHead>
+                                  <TableHead className="min-w-[150px]">Mensurável</TableHead>
+                                  <TableHead className="min-w-[150px]">Atingível</TableHead>
+                                  <TableHead className="min-w-[150px]">Relevante</TableHead>
+                                  <TableHead className="min-w-[120px]">Temporal</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {plan.acoes_smart?.map((acao, i) => (
+                                  <TableRow key={i}>
+                                    <TableCell>{acao.especifico}</TableCell>
+                                    <TableCell>{acao.mensuravel}</TableCell>
+                                    <TableCell>{acao.atingivel}</TableCell>
+                                    <TableCell>{acao.relevante}</TableCell>
+                                    <TableCell>{acao.temporal}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 text-center py-6">
+                      Nenhum planejamento registrado
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* EVOLUÇÃO (EXISTENTE) */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
@@ -450,6 +521,51 @@ export default function ProntuarioDetalhe() {
                 </CardContent>
               </Card>
 
+              {/* AVALIAÇÃO - VISUALIZAÇÃO */}
+              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                    <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                    Avaliação de Enfermagem
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {prontuario.avaliacao && prontuario.avaliacao.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data/Hora</TableHead>
+                            <TableHead>Enfermeiro</TableHead>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Avaliação</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {prontuario.avaliacao.map((aval, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="font-medium whitespace-nowrap">{aval.data_hora}</TableCell>
+                              <TableCell className="whitespace-nowrap">{aval.enfermeiro}</TableCell>
+                              <TableCell className="min-w-[200px]">{aval.descricao}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
+                                  {aval.avaliacao}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                      Nenhuma avaliação registrada
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* INTERVENÇÕES (EXISTENTE) */}
               {prontuario.intervencoes?.length > 0 && (
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
