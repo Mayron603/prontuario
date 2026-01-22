@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { 
   ArrowLeft, User, Calendar, Activity, FileText, 
   Heart, Stethoscope, ClipboardList, Pill, AlertCircle,
-  Save, Loader2, Edit3, Plus, BookOpen, Target, CheckCircle2
+  Save, Loader2, Edit3, Plus, BookOpen, Target, CheckCircle2, BrainCircuit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +23,6 @@ import SAEForm, { type SAEData } from '@/components/sae/SAEForm';
 import SAECard from '@/components/sae/SAECard';
 import RelatorioAltaForm, { type RelatorioAltaData } from '@/components/alta/RelatorioAltaForm';
 
-// Interfaces atualizadas para bater com o CreateProntuario
 interface ProntuarioCompleto {
   id: string;
   nome_paciente: string;
@@ -44,7 +43,12 @@ interface ProntuarioCompleto {
   evolucao_enfermagem: any[];
   intervencoes: any[];
   prescricoes: any[];
-  // Novos campos adicionados
+  // Novos campos
+  diagnosticos_enfermagem?: {
+    tipo: string;
+    descricao: string;
+    enfermeiro: string;
+  }[];
   planejamento?: {
     enfermeiro: string;
     acoes_smart: {
@@ -244,7 +248,6 @@ export default function ProntuarioDetalhe() {
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                       {prontuario.nome_paciente}
                     </h1>
-                    {/* BOTÃO DE EDITAR */}
                     <Link to={`${createPageUrl('CreateProntuario')}?edit=${prontuario.id}`}>
                       <Button variant="outline" size="sm" className="gap-1 h-8 rounded-lg">
                         <Edit3 className="w-3.5 h-3.5" />
@@ -425,7 +428,97 @@ export default function ProntuarioDetalhe() {
           <TabsContent value="evolucao">
             <div className="space-y-4">
               
-              {/* PLANEJAMENTO (SMART) - VISUALIZAÇÃO */}
+              {/* 1. EVOLUÇÃO (SIMPLES) */}
+              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                    <Stethoscope className="w-5 h-5 text-blue-600" />
+                    Evolução de Enfermagem
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {prontuario.evolucao_enfermagem?.length > 0 ? (
+                    <div className="space-y-4">
+                      {prontuario.evolucao_enfermagem.map((ev, i) => (
+                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Data/Hora:</span>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                                {ev.data_hora}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Enfermeiro(a):</span>
+                              <span className="text-sm text-slate-600 dark:text-slate-400">{ev.enfermeiro}</span>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Descrição:</span>
+                            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                              {ev.descricao}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                      Nenhuma evolução registrada
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 2. AVALIAÇÃO (CARD SEPARADO) */}
+              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                    <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                    Avaliação de Enfermagem
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {prontuario.avaliacao && prontuario.avaliacao.length > 0 ? (
+                    <div className="space-y-4">
+                      {prontuario.avaliacao.map((aval, i) => (
+                        <div key={i} className="p-4 bg-teal-50/30 dark:bg-teal-900/10 rounded-xl space-y-3 border border-teal-100 dark:border-teal-900/30">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-teal-200/50 dark:border-teal-800/50 pb-2 mb-2">
+                             <div className="flex items-center gap-2">
+                              <span className="font-semibold text-teal-800 dark:text-teal-300 text-sm">Data/Hora:</span>
+                              <Badge variant="outline" className="bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border-teal-200 dark:border-teal-800">
+                                {aval.data_hora}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-teal-800 dark:text-teal-300 text-sm">Enfermeiro(a):</span>
+                              <span className="text-sm text-slate-600 dark:text-slate-400">{aval.enfermeiro}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                               <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Descrição:</span>
+                               <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">{aval.descricao}</p>
+                            </div>
+                            <div>
+                               <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Avaliação:</span>
+                               <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">{aval.avaliacao}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                      Nenhuma avaliação registrada
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 3. PLANEJAMENTO (SMART) */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
@@ -478,96 +571,45 @@ export default function ProntuarioDetalhe() {
                 </CardContent>
               </Card>
 
-              {/* EVOLUÇÃO (EXISTENTE) */}
+              {/* 4. DIAGNÓSTICOS DE ENFERMAGEM */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                    <Stethoscope className="w-5 h-5 text-blue-600" />
-                    Evolução de Enfermagem
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {prontuario.evolucao_enfermagem?.length > 0 ? (
-                    <div className="space-y-4">
-                      {prontuario.evolucao_enfermagem.map((ev, i) => (
-                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Data/Hora:</span>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                                {ev.data_hora}
-                              </Badge>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                      <BrainCircuit className="w-5 h-5 text-purple-600" />
+                      Diagnósticos de Enfermagem
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                     {prontuario.diagnosticos_enfermagem && prontuario.diagnosticos_enfermagem.length > 0 ? (
+                        <div className="space-y-3">
+                          {prontuario.diagnosticos_enfermagem.map((diag, i) => (
+                            <div key={i} className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className={`
+                                    ${diag.tipo === 'Diagnóstico' ? 'bg-blue-50 text-blue-700' :
+                                      diag.tipo === 'Risco' ? 'bg-orange-50 text-orange-700' :
+                                      'bg-green-50 text-green-700'}
+                                  `}>
+                                    {diag.tipo}
+                                  </Badge>
+                                  <span className="text-sm text-slate-500">- {diag.enfermeiro}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">{diag.descricao}</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Enfermeiro(a):</span>
-                              <span className="text-sm text-slate-600 dark:text-slate-400">{ev.enfermeiro}</span>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Descrição:</span>
-                            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                              {ev.descricao}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                      Nenhuma evolução registrada
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* AVALIAÇÃO - VISUALIZAÇÃO */}
-              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                    <CheckCircle2 className="w-5 h-5 text-teal-600" />
-                    Avaliação de Enfermagem
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {prontuario.avaliacao && prontuario.avaliacao.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Data/Hora</TableHead>
-                            <TableHead>Enfermeiro</TableHead>
-                            <TableHead>Descrição</TableHead>
-                            <TableHead>Avaliação</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {prontuario.avaliacao.map((aval, i) => (
-                            <TableRow key={i}>
-                              <TableCell className="font-medium whitespace-nowrap">{aval.data_hora}</TableCell>
-                              <TableCell className="whitespace-nowrap">{aval.enfermeiro}</TableCell>
-                              <TableCell className="min-w-[200px]">{aval.descricao}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
-                                  {aval.avaliacao}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
                           ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                      Nenhuma avaliação registrada
-                    </p>
-                  )}
-                </CardContent>
+                        </div>
+                     ) : (
+                        <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                          Nenhum diagnóstico registrado
+                        </p>
+                     )}
+                  </CardContent>
               </Card>
 
-              {/* INTERVENÇÕES (EXISTENTE) */}
-              {prontuario.intervencoes?.length > 0 && (
-                <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+              {/* 5. INTERVENÇÕES (EXISTENTE) */}
+              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
                       <ClipboardList className="w-5 h-5 text-green-600" />
@@ -575,6 +617,7 @@ export default function ProntuarioDetalhe() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    {prontuario.intervencoes?.length > 0 ? (
                     <div className="space-y-3">
                       {prontuario.intervencoes.map((int, i) => (
                         <div key={i} className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-900/30">
@@ -596,9 +639,13 @@ export default function ProntuarioDetalhe() {
                         </div>
                       ))}
                     </div>
+                    ) : (
+                      <p className="text-slate-500 dark:text-slate-400 text-center py-8">
+                        Nenhuma intervenção registrada
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
-              )}
             </div>
           </TabsContent>
 

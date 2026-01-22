@@ -31,13 +31,15 @@ interface SinalVital {
   dor: string;
 }
 
+// [CORREÇÃO] A Evolução volta a ter o campo Avaliação
 interface Evolucao {
   data_hora: string;
   enfermeiro: string;
   descricao: string;
+  avaliacao: string; 
 }
 
-// [NOVO] Interface específica para a Seção de Avaliação
+// Interface para a Seção separada de Avaliação
 interface AvaliacaoData {
   data_hora: string;
   enfermeiro: string;
@@ -94,7 +96,7 @@ interface ProntuarioData {
   alergias: string[];
   sinais_vitais: SinalVital[];
   evolucao_enfermagem: Evolucao[]; 
-  avaliacao: AvaliacaoData[]; // [NOVO] Array separado
+  avaliacao: AvaliacaoData[]; 
   diagnosticos_enfermagem: DiagnosticoEnf[];
   planejamento: Planejamento[];
   intervencoes: Intervencao[];
@@ -125,7 +127,7 @@ export default function CreateProntuario() {
     alergias: [],
     sinais_vitais: [],
     evolucao_enfermagem: [],
-    avaliacao: [], // [NOVO]
+    avaliacao: [], 
     diagnosticos_enfermagem: [],
     planejamento: [],
     intervencoes: [],
@@ -141,11 +143,11 @@ export default function CreateProntuario() {
     data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
   });
   
+  // [CORREÇÃO] Estado da Evolução agora inclui avaliacao
   const [novaEvolucao, setNovaEvolucao] = useState<Evolucao>({
-    data_hora: '', enfermeiro: '', descricao: ''
+    data_hora: '', enfermeiro: '', descricao: '', avaliacao: ''
   });
 
-  // [NOVO] Estado para Avaliação
   const [novaAvaliacao, setNovaAvaliacao] = useState<AvaliacaoData>({
     data_hora: '', enfermeiro: '', descricao: '', avaliacao: ''
   });
@@ -304,16 +306,16 @@ export default function CreateProntuario() {
     });
   };
 
-  // Funções da Evolução
+  // [CORREÇÃO] Adicionar Evolução (com os 4 campos)
   const addEvolucao = () => {
-    if (novaEvolucao.data_hora && novaEvolucao.descricao) {
+    if (novaEvolucao.data_hora && (novaEvolucao.descricao || novaEvolucao.avaliacao)) {
       setProntuario({
         ...prontuario,
         evolucao_enfermagem: [...prontuario.evolucao_enfermagem, novaEvolucao]
       });
-      setNovaEvolucao({ data_hora: '', enfermeiro: '', descricao: '' });
+      setNovaEvolucao({ data_hora: '', enfermeiro: '', descricao: '', avaliacao: '' });
     } else {
-      toast.warning('Preencha Data/Hora e Descrição');
+      toast.warning('Preencha Data/Hora e a Descrição ou Avaliação');
     }
   };
 
@@ -324,7 +326,7 @@ export default function CreateProntuario() {
     });
   };
 
-  // [NOVO] Funções da Avaliação
+  // Funções da Avaliação (Seção Separada)
   const addAvaliacao = () => {
     if (novaAvaliacao.data_hora && novaAvaliacao.avaliacao) {
       setProntuario({
@@ -824,7 +826,7 @@ export default function CreateProntuario() {
             <TabsContent value="evolucao">
               <div className="space-y-8">
                 
-                {/* 1. Evolução de Enfermagem */}
+                {/* 1. Evolução de Enfermagem (COM CAMPO AVALIAÇÃO) */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -848,12 +850,26 @@ export default function CreateProntuario() {
                           className="bg-white dark:bg-slate-800 rounded-xl"
                         />
                       </div>
-                      <Textarea
-                        placeholder="Descrição da evolução..."
-                        value={novaEvolucao.descricao}
-                        onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
-                        className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
-                      />
+                      <div className="space-y-2">
+                         <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Descrição da Evolução</Label>
+                         <Textarea
+                          placeholder="Descreva a evolução do paciente..."
+                          value={novaEvolucao.descricao}
+                          onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
+                        />
+                      </div>
+                      
+                      {/* Campo Avaliação DENTRO da Evolução */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avaliação de Enfermagem (Opcional na Evolução)</Label>
+                        <Textarea
+                          placeholder="Realize a avaliação de enfermagem..."
+                          value={novaEvolucao.avaliacao}
+                          onChange={(e) => setNovaEvolucao({ ...novaEvolucao, avaliacao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 min-h-[80px] rounded-xl border-slate-200 dark:border-slate-700"
+                        />
+                      </div>
                       
                       <Button 
                         type="button" 
@@ -866,6 +882,7 @@ export default function CreateProntuario() {
                       </Button>
                     </div>
 
+                    {/* Lista Evolução */}
                     <div className="space-y-3">
                       {prontuario.evolucao_enfermagem.map((ev, i) => (
                         <div key={i} className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-xl">
@@ -878,21 +895,34 @@ export default function CreateProntuario() {
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
-                          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
-                            {ev.descricao}
-                          </p>
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-xs font-semibold text-slate-500 uppercase">Descrição:</span>
+                              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mt-1">
+                                {ev.descricao}
+                              </p>
+                            </div>
+                            {ev.avaliacao && (
+                              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
+                                <span className="text-xs font-semibold text-slate-500 uppercase">Avaliação:</span>
+                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mt-1">
+                                  {ev.avaliacao}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* 2. Avaliação de Enfermagem [NOVA SEÇÃO] */}
+                {/* 2. Avaliação de Enfermagem [SEÇÃO SEPARADA] */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-teal-500" />
-                      Avaliação de Enfermagem
+                      Avaliação de Enfermagem (Seção Dedicada)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
