@@ -7,7 +7,7 @@ import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, Save, Plus, X, User, Activity, 
   Heart, Pill, FileText, Loader2, Stethoscope,
-  ClipboardList, BrainCircuit, Target, Trash2
+  ClipboardList, BrainCircuit, Target, Trash2, CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,12 +31,18 @@ interface SinalVital {
   dor: string;
 }
 
-// EVOLUÇÃO CONTENDO AVALIAÇÃO INTEGRADA
 interface Evolucao {
   data_hora: string;
   enfermeiro: string;
   descricao: string;
-  avaliacao: string; 
+}
+
+// [NOVO] Interface específica para a Seção de Avaliação
+interface AvaliacaoData {
+  data_hora: string;
+  enfermeiro: string;
+  descricao: string;
+  avaliacao: string;
 }
 
 interface DiagnosticoEnf {
@@ -88,6 +94,7 @@ interface ProntuarioData {
   alergias: string[];
   sinais_vitais: SinalVital[];
   evolucao_enfermagem: Evolucao[]; 
+  avaliacao: AvaliacaoData[]; // [NOVO] Array separado
   diagnosticos_enfermagem: DiagnosticoEnf[];
   planejamento: Planejamento[];
   intervencoes: Intervencao[];
@@ -118,6 +125,7 @@ export default function CreateProntuario() {
     alergias: [],
     sinais_vitais: [],
     evolucao_enfermagem: [],
+    avaliacao: [], // [NOVO]
     diagnosticos_enfermagem: [],
     planejamento: [],
     intervencoes: [],
@@ -133,8 +141,12 @@ export default function CreateProntuario() {
     data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
   });
   
-  // Estado da Evolução (agora com Avaliação)
   const [novaEvolucao, setNovaEvolucao] = useState<Evolucao>({
+    data_hora: '', enfermeiro: '', descricao: ''
+  });
+
+  // [NOVO] Estado para Avaliação
+  const [novaAvaliacao, setNovaAvaliacao] = useState<AvaliacaoData>({
     data_hora: '', enfermeiro: '', descricao: '', avaliacao: ''
   });
 
@@ -144,7 +156,6 @@ export default function CreateProntuario() {
     enfermeiro: ''
   });
 
-  // Estados para Planejamento SMART
   const [novoPlanejamentoEnfermeiro, setNovoPlanejamentoEnfermeiro] = useState('');
   const [novaAcaoSmart, setNovaAcaoSmart] = useState<AcaoSmart>({
     especifico: '', mensuravel: '', atingivel: '', relevante: '', temporal: ''
@@ -185,6 +196,7 @@ export default function CreateProntuario() {
           dor: s.dor?.toString() || ''
         })) || [],
         evolucao_enfermagem: dadosExistentes.evolucao_enfermagem || [],
+        avaliacao: dadosExistentes.avaliacao || [],
         diagnosticos_enfermagem: dadosExistentes.diagnosticos_enfermagem || [],
         planejamento: dadosExistentes.planejamento || []
       });
@@ -292,16 +304,16 @@ export default function CreateProntuario() {
     });
   };
 
-  // Funções da Evolução (Agora contendo Avaliação)
+  // Funções da Evolução
   const addEvolucao = () => {
-    if (novaEvolucao.data_hora && (novaEvolucao.descricao || novaEvolucao.avaliacao)) {
+    if (novaEvolucao.data_hora && novaEvolucao.descricao) {
       setProntuario({
         ...prontuario,
         evolucao_enfermagem: [...prontuario.evolucao_enfermagem, novaEvolucao]
       });
-      setNovaEvolucao({ data_hora: '', enfermeiro: '', descricao: '', avaliacao: '' });
+      setNovaEvolucao({ data_hora: '', enfermeiro: '', descricao: '' });
     } else {
-      toast.warning('Preencha Data/Hora e a Descrição ou Avaliação');
+      toast.warning('Preencha Data/Hora e Descrição');
     }
   };
 
@@ -312,7 +324,27 @@ export default function CreateProntuario() {
     });
   };
 
-  // Funções para Planejamento SMART
+  // [NOVO] Funções da Avaliação
+  const addAvaliacao = () => {
+    if (novaAvaliacao.data_hora && novaAvaliacao.avaliacao) {
+      setProntuario({
+        ...prontuario,
+        avaliacao: [...prontuario.avaliacao, novaAvaliacao]
+      });
+      setNovaAvaliacao({ data_hora: '', enfermeiro: '', descricao: '', avaliacao: '' });
+    } else {
+      toast.warning('Preencha Data/Hora e Avaliação');
+    }
+  };
+
+  const removeAvaliacao = (index: number) => {
+    setProntuario({
+      ...prontuario,
+      avaliacao: prontuario.avaliacao.filter((_, i) => i !== index)
+    });
+  };
+
+
   const addAcaoSmartTemp = () => {
     if (novaAcaoSmart.especifico) {
       setAcoesSmartTemp([...acoesSmartTemp, novaAcaoSmart]);
@@ -335,7 +367,6 @@ export default function CreateProntuario() {
           acoes_smart: [...acoesSmartTemp]
         }]
       });
-      // Limpar campos
       setNovoPlanejamentoEnfermeiro('');
       setAcoesSmartTemp([]);
       setNovaAcaoSmart({ especifico: '', mensuravel: '', atingivel: '', relevante: '', temporal: '' });
@@ -789,10 +820,11 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* --- Evolução (Integrada), Planejamento (SMART), Diagnóstico e Implementação --- */}
+            {/* --- Evolução, Avaliação, Planejamento, Diagnóstico e Implementação --- */}
             <TabsContent value="evolucao">
               <div className="space-y-8">
-                {/* 1. Evolução DE ENFERMAGEM (Inclui Avaliação) */}
+                
+                {/* 1. Evolução de Enfermagem */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -802,7 +834,6 @@ export default function CreateProntuario() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                      {/* Inputs da Evolução */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Input
                           placeholder="Data/Hora"
@@ -817,26 +848,12 @@ export default function CreateProntuario() {
                           className="bg-white dark:bg-slate-800 rounded-xl"
                         />
                       </div>
-                      <div className="space-y-2">
-                         <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Descrição da Evolução</Label>
-                         <Textarea
-                          placeholder="Descreva a evolução do paciente..."
-                          value={novaEvolucao.descricao}
-                          onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
-                          className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
-                        />
-                      </div>
-                      
-                      {/* Campo Avaliação Integrado */}
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avaliação de Enfermagem</Label>
-                        <Textarea
-                          placeholder="Realize a avaliação de enfermagem..."
-                          value={novaEvolucao.avaliacao}
-                          onChange={(e) => setNovaEvolucao({ ...novaEvolucao, avaliacao: e.target.value })}
-                          className="bg-white dark:bg-slate-800 min-h-[80px] rounded-xl border-slate-200 dark:border-slate-700"
-                        />
-                      </div>
+                      <Textarea
+                        placeholder="Descrição da evolução..."
+                        value={novaEvolucao.descricao}
+                        onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
+                        className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
+                      />
                       
                       <Button 
                         type="button" 
@@ -849,7 +866,6 @@ export default function CreateProntuario() {
                       </Button>
                     </div>
 
-                    {/* Lista Evolução */}
                     <div className="space-y-3">
                       {prontuario.evolucao_enfermagem.map((ev, i) => (
                         <div key={i} className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-xl">
@@ -862,21 +878,89 @@ export default function CreateProntuario() {
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
-                          <div className="space-y-3">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                            {ev.descricao}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 2. Avaliação de Enfermagem [NOVA SEÇÃO] */}
+                <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-teal-500" />
+                      Avaliação de Enfermagem
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Input
+                          placeholder="Data/Hora"
+                          value={novaAvaliacao.data_hora}
+                          onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, data_hora: e.target.value })}
+                          className="bg-white dark:bg-slate-800 rounded-xl"
+                        />
+                        <Input
+                          placeholder="Enfermeiro"
+                          value={novaAvaliacao.enfermeiro}
+                          onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, enfermeiro: e.target.value })}
+                          className="bg-white dark:bg-slate-800 rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-500 uppercase">Descrição da Situação</Label>
+                        <Textarea
+                          placeholder="Descreva o contexto ou situação..."
+                          value={novaAvaliacao.descricao}
+                          onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, descricao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 min-h-[80px] rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-500 uppercase">Avaliação / Parecer</Label>
+                        <Textarea
+                          placeholder="Sua avaliação técnica..."
+                          value={novaAvaliacao.avaliacao}
+                          onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, avaliacao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="button" 
+                        onClick={addAvaliacao} 
+                        variant="outline"
+                        className="w-full border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-slate-600 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-300 h-12 rounded-xl transition-all duration-200"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar Avaliação
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {prontuario.avaliacao.map((aval, i) => (
+                        <div key={i} className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-xl">
+                          <div className="flex items-start justify-between mb-2">
                             <div>
-                              <span className="text-xs font-semibold text-slate-500 uppercase">Descrição:</span>
-                              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mt-1">
-                                {ev.descricao}
-                              </p>
+                              <span className="text-sm font-bold text-teal-600 dark:text-teal-400">{aval.data_hora}</span>
+                              <span className="text-sm text-slate-500 ml-2">- {aval.enfermeiro}</span>
                             </div>
-                            {ev.avaliacao && (
-                              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
-                                <span className="text-xs font-semibold text-slate-500 uppercase">Avaliação:</span>
-                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mt-1">
-                                  {ev.avaliacao}
-                                </p>
-                              </div>
-                            )}
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeAvaliacao(i)} className="text-slate-400 hover:text-red-500">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                             <p className="text-sm text-slate-700 dark:text-slate-300">
+                               <strong>Descrição:</strong> {aval.descricao}
+                             </p>
+                             <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-900/30">
+                               <strong className="block text-teal-700 dark:text-teal-300 text-xs uppercase mb-1">Avaliação:</strong>
+                               <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{aval.avaliacao}</p>
+                             </div>
                           </div>
                         </div>
                       ))}
@@ -884,17 +968,17 @@ export default function CreateProntuario() {
                   </CardContent>
                 </Card>
 
-                {/* 2. Planejamento SMART */}
+                {/* 3. Planejamento SMART */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
-                      <Target className="w-5 h-5 text-teal-600" />
+                      <Target className="w-5 h-5 text-indigo-600" />
                       Planejamento de Enfermagem (SMART)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Formulário de Adição */}
-                    <div className="p-5 bg-teal-50/50 dark:bg-teal-900/10 rounded-2xl border border-teal-100 dark:border-teal-900/30 space-y-4">
+                    <div className="p-5 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
                       <div className="space-y-2">
                         <Label>Enfermeiro Responsável pelo Planejamento</Label>
                         <Input
@@ -906,14 +990,14 @@ export default function CreateProntuario() {
                       </div>
 
                       <div className="space-y-3 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                        <Label className="text-teal-700 dark:text-teal-400 font-medium">Nova Ação SMART</Label>
+                        <Label className="text-indigo-700 dark:text-indigo-400 font-medium">Nova Ação SMART</Label>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           <Input placeholder="Específico (O que fazer?)" value={novaAcaoSmart.especifico} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, especifico: e.target.value })} />
                           <Input placeholder="Mensurável (Como medir?)" value={novaAcaoSmart.mensuravel} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, mensuravel: e.target.value })} />
                           <Input placeholder="Atingível (É possível?)" value={novaAcaoSmart.atingivel} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, atingivel: e.target.value })} />
                           <Input placeholder="Relevante (Por que?)" value={novaAcaoSmart.relevante} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, relevante: e.target.value })} />
                           <Input placeholder="Temporal (Quando?)" value={novaAcaoSmart.temporal} onChange={(e) => setNovaAcaoSmart({ ...novaAcaoSmart, temporal: e.target.value })} />
-                          <Button type="button" onClick={addAcaoSmartTemp} variant="outline" className="bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-900/40 dark:text-teal-300">
+                          <Button type="button" onClick={addAcaoSmartTemp} variant="outline" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300">
                             <Plus className="w-4 h-4 mr-2" /> Adicionar Linha
                           </Button>
                         </div>
@@ -952,7 +1036,7 @@ export default function CreateProntuario() {
                       <Button 
                         type="button" 
                         onClick={addPlanejamentoBlock} 
-                        className="w-full bg-teal-600 hover:bg-teal-700 text-white h-12 rounded-xl"
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 rounded-xl"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         Salvar Bloco de Planejamento
@@ -999,11 +1083,11 @@ export default function CreateProntuario() {
                   </CardContent>
                 </Card>
 
-                {/* 3. Diagnóstico de Enfermagem */}
+                {/* 4. Diagnóstico de Enfermagem */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
-                      <BrainCircuit className="w-5 h-5 text-indigo-500" />
+                      <BrainCircuit className="w-5 h-5 text-purple-500" />
                       Diagnósticos de Enfermagem
                     </CardTitle>
                   </CardHeader>
@@ -1057,7 +1141,7 @@ export default function CreateProntuario() {
                         type="button" 
                         onClick={addDiagnosticoEnf} 
                         variant="outline"
-                        className="w-full border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-slate-600 dark:text-slate-400 hover:text-indigo-700 dark:hover:text-indigo-300 h-12 rounded-xl transition-all duration-200"
+                        className="w-full border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-slate-600 dark:text-slate-400 hover:text-purple-700 dark:hover:text-purple-300 h-12 rounded-xl transition-all duration-200"
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         Adicionar Diagnóstico
@@ -1089,7 +1173,7 @@ export default function CreateProntuario() {
                   </CardContent>
                 </Card>
 
-                {/* 4. Implementação */}
+                {/* 5. Implementação */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
