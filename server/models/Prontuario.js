@@ -25,9 +25,19 @@ const ProntuarioSchema = new mongoose.Schema({
       dor: Number
     }
   ],
+  // [MODIFICADO] Adicionado campo avaliacao
   evolucao_enfermagem: [
     {
       data_hora: String,
+      descricao: String,
+      avaliacao: String, 
+      enfermeiro: String
+    }
+  ],
+  // [NOVO] Novo campo para Diagnósticos de Enfermagem
+  diagnosticos_enfermagem: [
+    {
+      tipo: String, // 'Diagnóstico', 'Risco', 'Promoção'
       descricao: String,
       enfermeiro: String
     }
@@ -51,13 +61,11 @@ const ProntuarioSchema = new mongoose.Schema({
   created_date: { type: Date, default: Date.now }
 });
 
-// --- A MÁGICA ACONTECE AQUI ---
-// Essa configuração faz o MongoDB devolver "id" em vez de "_id" para o frontend
 ProntuarioSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: function (doc, ret) {
-    delete ret._id; // Remove o _id original para não ficar duplicado
+    delete ret._id;
   }
 });
 

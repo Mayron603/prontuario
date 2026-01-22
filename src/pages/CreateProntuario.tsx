@@ -7,7 +7,7 @@ import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, Save, Plus, X, User, Activity, 
   Heart, Pill, FileText, Loader2, Stethoscope,
-  ClipboardList
+  ClipboardList, BrainCircuit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +16,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 
-// 1. Interfaces
+// 1. Interfaces Atualizadas
 interface SinalVital {
   data_hora: string;
   pa: string;
@@ -31,6 +32,14 @@ interface SinalVital {
 
 interface Evolucao {
   data_hora: string;
+  descricao: string;
+  avaliacao: string; // [NOVO]
+  enfermeiro: string;
+}
+
+// [NOVO] Interface para Diagnóstico de Enfermagem
+interface DiagnosticoEnf {
+  tipo: 'Diagnóstico' | 'Risco' | 'Promoção';
   descricao: string;
   enfermeiro: string;
 }
@@ -65,6 +74,7 @@ interface ProntuarioData {
   alergias: string[];
   sinais_vitais: SinalVital[];
   evolucao_enfermagem: Evolucao[];
+  diagnosticos_enfermagem: DiagnosticoEnf[]; // [NOVO]
   intervencoes: Intervencao[];
   prescricoes: Prescricao[];
   observacoes: string;
@@ -74,7 +84,7 @@ export default function CreateProntuario() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const idToEdit = searchParams.get('edit'); // Recupera ID da URL se estiver editando
+  const idToEdit = searchParams.get('edit');
   
   // 2. Estado Principal
   const [prontuario, setProntuario] = useState<ProntuarioData>({
@@ -93,12 +103,13 @@ export default function CreateProntuario() {
     alergias: [],
     sinais_vitais: [],
     evolucao_enfermagem: [],
+    diagnosticos_enfermagem: [], // [NOVO]
     intervencoes: [],
     prescricoes: [],
     observacoes: ''
   });
 
-  // 3. Estados Auxiliares para novos itens
+  // 3. Estados Auxiliares
   const [novoDiagnostico, setNovoDiagnostico] = useState('');
   const [novaAlergia, setNovaAlergia] = useState('');
   
@@ -106,8 +117,16 @@ export default function CreateProntuario() {
     data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
   });
   
+  // [MODIFICADO] Evolução com Avaliação
   const [novaEvolucao, setNovaEvolucao] = useState<Evolucao>({
-    data_hora: '', descricao: '', enfermeiro: ''
+    data_hora: '', descricao: '', avaliacao: '', enfermeiro: ''
+  });
+
+  // [NOVO] Estado para Diagnóstico de Enfermagem
+  const [novoDiagnosticoEnf, setNovoDiagnosticoEnf] = useState<DiagnosticoEnf>({
+    tipo: 'Diagnóstico',
+    descricao: '',
+    enfermeiro: ''
   });
   
   const [novaIntervencao, setNovaIntervencao] = useState<Intervencao>({
@@ -118,7 +137,7 @@ export default function CreateProntuario() {
     medicamento: '', dose: '', via: '', horarios: ''
   });
 
-  // 4. Buscar dados se estiver editando
+  // 4. Buscar dados
   const { data: dadosExistentes, isLoading: loadingData } = useQuery({
     queryKey: ['prontuario', idToEdit],
     queryFn: async () => {
@@ -129,13 +148,12 @@ export default function CreateProntuario() {
     enabled: !!idToEdit
   });
 
-  // 5. Preencher formulário ao carregar dados
+  // 5. Preencher formulário
   useEffect(() => {
     if (dadosExistentes) {
       setProntuario({
         ...dadosExistentes,
         idade: dadosExistentes.idade?.toString() || '',
-        // Converter números para string para os inputs funcionarem corretamente
         sinais_vitais: dadosExistentes.sinais_vitais?.map((s: any) => ({
           ...s,
           fc: s.fc?.toString() || '',
@@ -143,12 +161,14 @@ export default function CreateProntuario() {
           temperatura: s.temperatura?.toString() || '',
           spo2: s.spo2?.toString() || '',
           dor: s.dor?.toString() || ''
-        })) || []
+        })) || [],
+        // Garantir arrays vazios se não existirem no backend antigo
+        diagnosticos_enfermagem: dadosExistentes.diagnosticos_enfermagem || []
       });
     }
   }, [dadosExistentes]);
 
-  // 6. Mutação para Salvar (Criar ou Editar)
+  // 6. Mutação para Salvar
   const saveMutation = useMutation({
     mutationFn: async (data: ProntuarioData) => {
       const cleanedData = {
@@ -186,13 +206,13 @@ export default function CreateProntuario() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prontuario.nome_paciente || !prontuario.diagnostico_principal) {
-      toast.error('Preencha os campos obrigatórios (Nome e Diagnóstico Principal)');
+      toast.error('Preencha os campos obrigatórios');
       return;
     }
     saveMutation.mutate(prontuario);
   };
 
-  // --- Funções Auxiliares de Adição/Remoção ---
+  // --- Funções Auxiliares ---
 
   const addDiagnosticoSecundario = () => {
     if (novoDiagnostico.trim()) {
@@ -238,7 +258,7 @@ export default function CreateProntuario() {
         data_hora: '', pa: '', fc: '', fr: '', temperatura: '', spo2: '', dor: ''
       });
     } else {
-      toast.warning('Preencha pelo menos Data/Hora e PA');
+      toast.warning('Preencha Data/Hora e PA');
     }
   };
 
@@ -249,13 +269,14 @@ export default function CreateProntuario() {
     });
   };
 
+  // [MODIFICADO] Adicionar Evolução
   const addEvolucao = () => {
     if (novaEvolucao.data_hora && novaEvolucao.descricao) {
       setProntuario({
         ...prontuario,
         evolucao_enfermagem: [...prontuario.evolucao_enfermagem, novaEvolucao]
       });
-      setNovaEvolucao({ data_hora: '', descricao: '', enfermeiro: '' });
+      setNovaEvolucao({ data_hora: '', descricao: '', avaliacao: '', enfermeiro: '' });
     } else {
       toast.warning('Preencha Data/Hora e Descrição');
     }
@@ -265,6 +286,26 @@ export default function CreateProntuario() {
     setProntuario({
       ...prontuario,
       evolucao_enfermagem: prontuario.evolucao_enfermagem.filter((_, i) => i !== index)
+    });
+  };
+
+  // [NOVO] Adicionar Diagnóstico de Enfermagem
+  const addDiagnosticoEnf = () => {
+    if (novoDiagnosticoEnf.descricao && novoDiagnosticoEnf.enfermeiro) {
+      setProntuario({
+        ...prontuario,
+        diagnosticos_enfermagem: [...prontuario.diagnosticos_enfermagem, novoDiagnosticoEnf]
+      });
+      setNovoDiagnosticoEnf({ tipo: 'Diagnóstico', descricao: '', enfermeiro: '' });
+    } else {
+      toast.warning('Preencha a descrição e o enfermeiro');
+    }
+  };
+
+  const removeDiagnosticoEnf = (index: number) => {
+    setProntuario({
+      ...prontuario,
+      diagnosticos_enfermagem: prontuario.diagnosticos_enfermagem.filter((_, i) => i !== index)
     });
   };
 
@@ -295,7 +336,7 @@ export default function CreateProntuario() {
       });
       setNovaPrescricao({ medicamento: '', dose: '', via: '', horarios: '' });
     } else {
-      toast.warning('Preencha pelo menos Medicamento e Dose');
+      toast.warning('Preencha Medicamento e Dose');
     }
   };
 
@@ -362,7 +403,7 @@ export default function CreateProntuario() {
               </TabsTrigger>
               <TabsTrigger value="evolucao" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/30 dark:data-[state=active]:text-blue-300">
                 <Stethoscope className="w-4 h-4 mr-2" />
-                Evolução
+                Evolução e SAE
               </TabsTrigger>
               <TabsTrigger value="prescricoes" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/30 dark:data-[state=active]:text-blue-300">
                 <Pill className="w-4 h-4 mr-2" />
@@ -370,9 +411,9 @@ export default function CreateProntuario() {
               </TabsTrigger>
             </TabsList>
 
-            {/* --- Identificação --- */}
+            {/* ... Conteúdo das Tabs Identificação, Clínica e Sinais (IGUAIS AO ANTERIOR) ... */}
             <TabsContent value="identificacao">
-              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
                     <User className="w-5 h-5 text-blue-500" />
@@ -484,8 +525,7 @@ export default function CreateProntuario() {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            {/* --- Dados Clínicos --- */}
+            
             <TabsContent value="clinica">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -591,7 +631,6 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* --- Sinais Vitais --- */}
             <TabsContent value="sinais">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
@@ -690,10 +729,10 @@ export default function CreateProntuario() {
               </Card>
             </TabsContent>
 
-            {/* --- Evolução e Intervenções --- */}
+            {/* --- Evolução, Diagnóstico e Implementação --- */}
             <TabsContent value="evolucao">
-              <div className="space-y-6">
-                {/* Evolução */}
+              <div className="space-y-8">
+                {/* 1. Evolução */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
@@ -703,6 +742,7 @@ export default function CreateProntuario() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                      {/* Inputs da Evolução */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Input
                           placeholder="Data/Hora"
@@ -723,6 +763,13 @@ export default function CreateProntuario() {
                         onChange={(e) => setNovaEvolucao({ ...novaEvolucao, descricao: e.target.value })}
                         className="bg-white dark:bg-slate-800 min-h-[100px] rounded-xl"
                       />
+                      {/* Novo Campo Avaliação */}
+                      <Textarea
+                        placeholder="Avaliação..."
+                        value={novaEvolucao.avaliacao}
+                        onChange={(e) => setNovaEvolucao({ ...novaEvolucao, avaliacao: e.target.value })}
+                        className="bg-white dark:bg-slate-800 min-h-[80px] rounded-xl border-slate-200 dark:border-slate-700"
+                      />
                       
                       <Button 
                         type="button" 
@@ -735,6 +782,7 @@ export default function CreateProntuario() {
                       </Button>
                     </div>
 
+                    {/* Lista Evolução */}
                     <div className="space-y-3">
                       {prontuario.evolucao_enfermagem.map((ev, i) => (
                         <div key={i} className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-xl">
@@ -747,26 +795,125 @@ export default function CreateProntuario() {
                               <X className="w-4 h-4" />
                             </Button>
                           </div>
-                          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{ev.descricao}</p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                              <strong>Descrição:</strong> {ev.descricao}
+                            </p>
+                            {ev.avaliacao && (
+                              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line p-2 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                                <strong>Avaliação:</strong> {ev.avaliacao}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Intervenções */}
+                {/* 2. Diagnóstico de Enfermagem (NOVA SEÇÃO) */}
+                <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+                      <BrainCircuit className="w-5 h-5 text-indigo-500" />
+                      Diagnósticos de Enfermagem
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                      
+                      {/* Seleção do Tipo */}
+                      <div className="space-y-2">
+                        <Label>Tipo de Diagnóstico</Label>
+                        <RadioGroup 
+                          value={novoDiagnosticoEnf.tipo} 
+                          onValueChange={(v: any) => setNovoDiagnosticoEnf({...novoDiagnosticoEnf, tipo: v})}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Diagnóstico" id="tipo-diag" />
+                            <Label htmlFor="tipo-diag">Diagnóstico</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Risco" id="tipo-risco" />
+                            <Label htmlFor="tipo-risco">Risco</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Promoção" id="tipo-promocao" />
+                            <Label htmlFor="tipo-promocao">Promoção</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Descrição do Diagnóstico</Label>
+                        <Textarea
+                          placeholder="Descreva o diagnóstico..."
+                          value={novoDiagnosticoEnf.descricao}
+                          onChange={(e) => setNovoDiagnosticoEnf({ ...novoDiagnosticoEnf, descricao: e.target.value })}
+                          className="bg-white dark:bg-slate-800 rounded-xl"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Enfermeiro Responsável</Label>
+                        <Input
+                          placeholder="Nome do Enfermeiro"
+                          value={novoDiagnosticoEnf.enfermeiro}
+                          onChange={(e) => setNovoDiagnosticoEnf({ ...novoDiagnosticoEnf, enfermeiro: e.target.value })}
+                          className="bg-white dark:bg-slate-800 rounded-xl"
+                        />
+                      </div>
+
+                      <Button 
+                        type="button" 
+                        onClick={addDiagnosticoEnf} 
+                        variant="outline"
+                        className="w-full border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-slate-600 dark:text-slate-400 hover:text-indigo-700 dark:hover:text-indigo-300 h-12 rounded-xl transition-all duration-200"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar Diagnóstico
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {prontuario.diagnosticos_enfermagem?.map((diag, i) => (
+                        <div key={i} className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-xl">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                                diag.tipo === 'Diagnóstico' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                diag.tipo === 'Risco' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                                'bg-green-100 text-green-700 border-green-200'
+                              }`}>
+                                {diag.tipo}
+                              </span>
+                              <span className="text-sm text-slate-500">- {diag.enfermeiro}</span>
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeDiagnosticoEnf(i)} className="text-slate-400 hover:text-red-500">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <p className="text-sm text-slate-700 dark:text-slate-300">{diag.descricao}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 3. Implementação (RENOMEADO) */}
                 <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
                       <ClipboardList className="w-5 h-5 text-green-500" />
-                      Intervenções Realizadas
+                      Implementação Realizadas
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <Input
-                          placeholder="Intervenção"
+                          placeholder="Implementação/Intervenção"
                           value={novaIntervencao.intervencao}
                           onChange={(e) => setNovaIntervencao({ ...novaIntervencao, intervencao: e.target.value })}
                           className="bg-white dark:bg-slate-800 rounded-xl"
@@ -792,7 +939,7 @@ export default function CreateProntuario() {
                         className="w-full border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 text-slate-600 dark:text-slate-400 hover:text-green-700 dark:hover:text-green-300 h-12 rounded-xl transition-all duration-200"
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Adicionar Intervenção
+                        Adicionar Implementação
                       </Button>
                     </div>
 
@@ -814,8 +961,8 @@ export default function CreateProntuario() {
                 </Card>
               </div>
             </TabsContent>
-
-            {/* --- Prescrições --- */}
+            
+            {/* ... Tab Prescrições (IGUAL AO ANTERIOR) ... */}
             <TabsContent value="prescricoes">
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
