@@ -40,10 +40,19 @@ interface ProntuarioCompleto {
   observacoes: string;
   data_internacao?: string;
   sinais_vitais: any[];
-  evolucao_enfermagem: any[];
-  intervencoes: any[];
-  prescricoes: any[];
-  // Novos campos
+  // Campos atualizados
+  evolucao_enfermagem: {
+    data_hora: string;
+    enfermeiro: string;
+    descricao: string;
+    avaliacao?: string; // Campo opcional dentro da evolução
+  }[];
+  avaliacao?: { // Seção separada
+    data_hora: string;
+    enfermeiro: string;
+    descricao: string;
+    avaliacao: string;
+  }[];
   diagnosticos_enfermagem?: {
     tipo: string;
     descricao: string;
@@ -59,12 +68,8 @@ interface ProntuarioCompleto {
       temporal: string;
     }[];
   }[];
-  avaliacao?: {
-    data_hora: string;
-    enfermeiro: string;
-    descricao: string;
-    avaliacao: string;
-  }[];
+  intervencoes: any[];
+  prescricoes: any[];
 }
 
 export default function ProntuarioDetalhe() {
@@ -428,7 +433,7 @@ export default function ProntuarioDetalhe() {
           <TabsContent value="evolucao">
             <div className="space-y-4">
               
-              {/* 1. EVOLUÇÃO (SIMPLES) */}
+              {/* 1. Evolução de Enfermagem (Com Exibição da Avaliação interna) */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
@@ -460,6 +465,16 @@ export default function ProntuarioDetalhe() {
                               {ev.descricao}
                             </p>
                           </div>
+
+                          {/* Exibe a Avaliação dentro da Evolução se existir */}
+                          {ev.avaliacao && (
+                            <div>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Avaliação (Na Evolução):</span>
+                              <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed bg-blue-50/50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                                {ev.avaliacao}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -471,12 +486,12 @@ export default function ProntuarioDetalhe() {
                 </CardContent>
               </Card>
 
-              {/* 2. AVALIAÇÃO (CARD SEPARADO) */}
+              {/* 2. Avaliação de Enfermagem (SEÇÃO SEPARADA) */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
                     <CheckCircle2 className="w-5 h-5 text-teal-600" />
-                    Avaliação de Enfermagem
+                    Avaliação de Enfermagem (Seção Dedicada)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -500,11 +515,11 @@ export default function ProntuarioDetalhe() {
                           <div className="grid md:grid-cols-2 gap-4">
                             <div>
                                <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Descrição:</span>
-                               <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">{aval.descricao}</p>
+                               <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700">{aval.descricao}</p>
                             </div>
                             <div>
-                               <span className="font-semibold text-slate-700 dark:text-slate-300 text-sm block mb-1">Avaliação:</span>
-                               <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">{aval.avaliacao}</p>
+                               <span className="font-semibold text-teal-700 dark:text-teal-300 text-sm block mb-1">Avaliação:</span>
+                               <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-3 rounded-lg border border-teal-100 dark:border-teal-900/50">{aval.avaliacao}</p>
                             </div>
                           </div>
                         </div>
@@ -512,13 +527,13 @@ export default function ProntuarioDetalhe() {
                     </div>
                   ) : (
                     <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                      Nenhuma avaliação registrada
+                      Nenhuma avaliação separada registrada
                     </p>
                   )}
                 </CardContent>
               </Card>
 
-              {/* 3. PLANEJAMENTO (SMART) */}
+              {/* 3. Planejamento SMART */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
@@ -571,7 +586,7 @@ export default function ProntuarioDetalhe() {
                 </CardContent>
               </Card>
 
-              {/* 4. DIAGNÓSTICOS DE ENFERMAGEM */}
+              {/* 4. Diagnósticos de Enfermagem */}
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
@@ -608,8 +623,9 @@ export default function ProntuarioDetalhe() {
                   </CardContent>
               </Card>
 
-              {/* 5. INTERVENÇÕES (EXISTENTE) */}
-              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+              {/* 5. Intervenções */}
+              {prontuario.intervencoes?.length > 0 && (
+                <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
                       <ClipboardList className="w-5 h-5 text-green-600" />
@@ -617,7 +633,6 @@ export default function ProntuarioDetalhe() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {prontuario.intervencoes?.length > 0 ? (
                     <div className="space-y-3">
                       {prontuario.intervencoes.map((int, i) => (
                         <div key={i} className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-900/30">
@@ -639,13 +654,9 @@ export default function ProntuarioDetalhe() {
                         </div>
                       ))}
                     </div>
-                    ) : (
-                      <p className="text-slate-500 dark:text-slate-400 text-center py-8">
-                        Nenhuma intervenção registrada
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
+              )}
             </div>
           </TabsContent>
 
